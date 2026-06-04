@@ -1,0 +1,16 @@
+# ESP-IDF
+build/
+sdkconfig
+sdkconfig.old
+
+# VS Code
+.vscode/
+
+# Python
+__pycache__/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp

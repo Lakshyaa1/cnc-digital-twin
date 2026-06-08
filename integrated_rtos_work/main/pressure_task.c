@@ -46,7 +46,7 @@ static void bmp280_read_calibration(void)
     uint8_t reg = 0x88;
     uint8_t calib[24];
 
-    ESP_ERROR_CHECK(
+   esp_err_t err =
         i2c_master_write_read_device(
             BMP280_I2C_PORT,
             BMP280_I2C_ADDR,
@@ -54,7 +54,12 @@ static void bmp280_read_calibration(void)
             1,
             calib,
             sizeof(calib),
-            pdMS_TO_TICKS(100)));
+            pdMS_TO_TICKS(100));
+
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to read BMP280 calibration data");
+        return;
+    }
 
     bmp_cal.dig_T1 = calib[0]  | (calib[1]  << 8);
     bmp_cal.dig_T2 = calib[2]  | (calib[3]  << 8);
@@ -95,8 +100,13 @@ static void bmp280_i2c_init(void)
 static void bmp280_config(void)
 {
     uint8_t payload[2] = {BMP280_CTRL_MEAS, 0x57};
-    ESP_ERROR_CHECK(i2c_master_write_to_device(
-        BMP280_I2C_PORT, BMP280_I2C_ADDR, payload, sizeof(payload), pdMS_TO_TICKS(100)));
+    esp_err_t err =i2c_master_write_to_device(
+        BMP280_I2C_PORT, BMP280_I2C_ADDR, payload, sizeof(payload), pdMS_TO_TICKS(100));
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to configure BMP280");
+    } else {
+        ESP_LOGI(TAG, "BMP280 configured for normal mode"); 
+    }
 }
 static void bmp280_read(float *pressure_pa, float *temperature_c)
 {
@@ -112,14 +122,21 @@ static void bmp280_read(float *pressure_pa, float *temperature_c)
     double pvar1, pvar2;
     double pressure;
 
-    ESP_ERROR_CHECK(i2c_master_write_read_device(
+    esp_err_t err = i2c_master_write_read_device(
         BMP280_I2C_PORT,
         BMP280_I2C_ADDR,
         &reg,
         1,
         data,
         sizeof(data),
-        pdMS_TO_TICKS(100)));
+        pdMS_TO_TICKS(100));
+
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to read BMP280 data");
+        *temperature_c = 0.0f;
+        *pressure_pa = 0.0f;
+        return;
+    }
 
     adc_p = ((int32_t)data[0] << 12) |
             ((int32_t)data[1] << 4)  |

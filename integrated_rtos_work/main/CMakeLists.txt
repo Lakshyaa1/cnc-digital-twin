@@ -10,5 +10,6 @@ idf_component_register(
         "rfid_task.c"
         "aggregator_task.c"
         "analytics_task.c"
+        "wifi_server.c"
     INCLUDE_DIRS "."
 )

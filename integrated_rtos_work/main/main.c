@@ -5,7 +5,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "cnc_firmware_rtos.h"
-
+#include "wifi_server.h"
 static const char *TAG = "MAIN";
 
 void app_main(void) {
@@ -22,7 +22,7 @@ void app_main(void) {
 
     // Start RTOS architecture
     rtos_init();
-
+wifi_server_start();
     // At this point, all tasks are running and scheduler has taken over
     // This main task can be suspended or used for high-level monitoring
 
@@ -36,7 +36,6 @@ void app_main(void) {
     ESP_LOGI(TAG, "  - rfid_handler_task (event-driven)");
     ESP_LOGI(TAG, "  - aggregator_task (10Hz)");
     ESP_LOGI(TAG, "  - analytics_task (2Hz)");
-
     while (1) {
         // Optional: Main task can monitor system health, heap, task stats, etc.
         vTaskDelay(pdMS_TO_TICKS(5000));  // Log every 5 seconds

@@ -94,7 +94,7 @@ void rtos_init(void) {
                       NULL, ULTRASONIC_TASK_PRIORITY, NULL);
     if (ret != pdPASS) ESP_LOGE(TAG, "Failed to create ultrasonic_task");
     else ESP_LOGI(TAG, "✓ ultrasonic_task created (priority %d)", ULTRASONIC_TASK_PRIORITY);
-    
+   
     ret = xTaskCreate(housekeeping_task, "housekeeping_task", HOUSEKEEPING_TASK_STACK_SIZE,
                       NULL, HOUSEKEEPING_TASK_PRIORITY, NULL);
     if (ret != pdPASS) ESP_LOGE(TAG, "Failed to create housekeeping_task");

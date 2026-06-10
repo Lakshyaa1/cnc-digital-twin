@@ -93,13 +93,17 @@ typedef struct {
     water_level_sample_t last_water_level;
     barcode_sample_t last_barcode;
     rfid_sample_t last_rfid;
-    
+
+    // Vibration metrics
+    float vibration_g;
+    float filtered_vibration_g;
+
     // Anomaly flags
-    uint8_t accel_anomaly;        // High vibration detected
-    uint8_t pressure_anomaly;     // Out of range
-    uint8_t temp_anomaly;         // Out of range
-    uint8_t user_authenticated;   // RFID verified
-    
+    uint8_t accel_anomaly;
+    uint8_t pressure_anomaly;
+    uint8_t temp_anomaly;
+    uint8_t user_authenticated;
+
     // Timestamp of last update
     uint64_t last_update_ms;
 } sensor_data_t;

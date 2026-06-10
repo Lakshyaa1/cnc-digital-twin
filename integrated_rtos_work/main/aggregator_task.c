@@ -6,7 +6,10 @@
 static const char *TAG = "AGGREGATOR";
 
 #define KX134_COUNTS_PER_G   4096.0f
+#define VIBRATION_FILTER_SIZE 5
 
+static float vibration_history[VIBRATION_FILTER_SIZE] = {0};
+static uint8_t vibration_index = 0;
 void aggregator_task(void *pvParameters)
 {
     accel_sample_t accel_sample = {0};
@@ -33,8 +36,32 @@ void aggregator_task(void *pvParameters)
         while (xQueueReceive(barcode_queue, &barcode_sample, 0) == pdTRUE) {}
         while (xQueueReceive(rfid_queue, &rfid_sample, 0) == pdTRUE) {}
 
+        float vibration_g =
+            sqrtf(
+                (float)accel_sample.x * accel_sample.x +
+                (float)accel_sample.y * accel_sample.y +
+                (float)accel_sample.z * accel_sample.z
+            ) / KX134_COUNTS_PER_G;
+
+        vibration_history[vibration_index] = vibration_g;
+
+        vibration_index =
+            (vibration_index + 1) % VIBRATION_FILTER_SIZE;
+
+        float filtered_vibration_g = 0.0f;
+
+        for (int i = 0; i < VIBRATION_FILTER_SIZE; i++)
+        {
+            filtered_vibration_g += vibration_history[i];
+        }
+
+        filtered_vibration_g /= VIBRATION_FILTER_SIZE;
+
         sensor_data_lock();
         shared_sensor_data.last_accel = accel_sample;
+
+        shared_sensor_data.vibration_g = vibration_g;
+        shared_sensor_data.filtered_vibration_g = filtered_vibration_g;
         shared_sensor_data.last_bmp280 = pressure_sample.bmp280;
         shared_sensor_data.last_analog_pressure = pressure_sample.analog;
         shared_sensor_data.last_ultrasonic = ultrasonic_sample;
@@ -48,9 +75,7 @@ void aggregator_task(void *pvParameters)
         }
 
         shared_sensor_data.accel_anomaly =
-            (sqrtf((float)accel_sample.x * accel_sample.x +
-                   (float)accel_sample.y * accel_sample.y +
-                   (float)accel_sample.z * accel_sample.z) > 20000.0f) ? 1U : 0U;
+            (filtered_vibration_g > 2.5f) ? 1U : 0U;
         shared_sensor_data.pressure_anomaly =
             (pressure_sample.bmp280.pressure_pa < 80000.0f ||
              pressure_sample.bmp280.pressure_pa > 120000.0f) ? 1U : 0U;
@@ -64,10 +89,12 @@ void aggregator_task(void *pvParameters)
         if ((cycle_count % 10U) == 0U) {
             ESP_LOGI(
                 TAG,
-                "snapshot: accel=(%.3f,%.3f,%.3f) g bmp280=%.2f Pa temp=%.2f C gauge=%.2f bar dist=%.2f cm water=%s barcode=%s rfid=%s auth=%s",
+                "snapshot: accel=(%.3f,%.3f,%.3f) g vib=%.3fg filtered=%.3fg bmp280=%.2f Pa temp=%.2f C gauge=%.2f bar dist=%.2f cm water=%s barcode=%s rfid=%s auth=%s",
                 accel_sample.x / KX134_COUNTS_PER_G,
                 accel_sample.y / KX134_COUNTS_PER_G,
                 accel_sample.z / KX134_COUNTS_PER_G,
+                vibration_g,
+                filtered_vibration_g,
                 pressure_sample.bmp280.pressure_pa,
                 pressure_sample.bmp280.temperature_c,
                 pressure_sample.analog.analog_pressure_bar,

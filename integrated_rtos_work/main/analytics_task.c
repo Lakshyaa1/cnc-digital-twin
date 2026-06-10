@@ -7,7 +7,7 @@ static const char *TAG = "ANALYTICS";
 #define KX134_COUNTS_PER_G         4096.0f
 
 // ===== ANOMALY DETECTION THRESHOLDS =====
-#define VIBRATION_THRESHOLD_G       5.0f    // 5g for alarm
+#define VIBRATION_THRESHOLD_G       2.5f    // 5g for alarm
 #define PRESSURE_MIN_KPA           80.0f
 #define PRESSURE_MAX_KPA           120.0f
 #define TEMP_MIN_C                 15.0f
@@ -21,6 +21,8 @@ void analytics_task(void *pvParameters) {
     bmp280_sample_t pressure_copy = {0};
     ultrasonic_sample_t distance_copy = {0};
 
+    float filtered_vibration_g = 0.0f;
+
     TickType_t last_wake_time = xTaskGetTickCount();
     const TickType_t period = pdMS_TO_TICKS(500);  // 500ms = 2Hz analysis
     uint32_t analysis_count = 0;
@@ -33,23 +35,28 @@ void analytics_task(void *pvParameters) {
         // Read shared data (protected by mutex)
         sensor_data_lock();
         {
-            memcpy(&accel_copy, &shared_sensor_data.last_accel, sizeof(accel_sample_t));
-            memcpy(&pressure_copy, &shared_sensor_data.last_bmp280, sizeof(bmp280_sample_t));
+            memcpy(&accel_copy,
+                   &shared_sensor_data.last_accel,
+                   sizeof(accel_sample_t));
+
+            filtered_vibration_g =
+                shared_sensor_data.filtered_vibration_g;
+
+            memcpy(&pressure_copy,
+                   &shared_sensor_data.last_bmp280,
+                   sizeof(bmp280_sample_t));
             memcpy(&distance_copy, &shared_sensor_data.last_ultrasonic, sizeof(ultrasonic_sample_t));
         }
         sensor_data_unlock();
 
         // ===== VIBRATION ANALYSIS =====
-        float accel_mag = sqrtf(
-            (float)accel_copy.x * accel_copy.x +
-            (float)accel_copy.y * accel_copy.y +
-            (float)accel_copy.z * accel_copy.z
-        );
-        float accel_g = accel_mag / KX134_COUNTS_PER_G;
+        float accel_g = filtered_vibration_g;
 
         if (accel_g > VIBRATION_THRESHOLD_G) {
-            ESP_LOGW(TAG, "HIGH VIBRATION ALERT: %.2f g (threshold: %.2f g)", 
-                     accel_g, VIBRATION_THRESHOLD_G);
+            ESP_LOGW(TAG,
+                     "FILTERED VIBRATION ALERT: %.2f g (threshold: %.2f g)",
+                     accel_g,
+                     VIBRATION_THRESHOLD_G);
             // TODO: Log to predictive maintenance database
             // Possible causes: bearing wear, spindle imbalance, tool breakage
         }

@@ -6,6 +6,7 @@
 
 #include "esp_log.h"
 #include "mqtt_client.h"
+#include "wifi_server.h"
 
 static const char *TAG = "MQTT";
 
@@ -35,8 +36,14 @@ static void mqtt_event_handler(void *handler_args,
 
 void mqtt_task(void *pvParameters)
 {
-    ESP_LOGI(TAG, "Waiting for WiFi startup...");
-    vTaskDelay(pdMS_TO_TICKS(15000));
+    ESP_LOGI(TAG, "Waiting for WiFi connection...");
+
+    while (!wifi_connected)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    ESP_LOGI(TAG, "WiFi connected, starting MQTT");
 
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = MQTT_BROKER_URI,

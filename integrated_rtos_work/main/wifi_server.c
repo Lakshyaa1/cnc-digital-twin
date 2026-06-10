@@ -20,6 +20,7 @@ static const char *TAG = "WIFI_SERVER";
 #define WIFI_PASSWORD  "20851137"
 
 static httpd_handle_t server = NULL;
+bool wifi_connected = false;
 static esp_err_t telemetry_get_handler(httpd_req_t *req)
 {
     char response[1024];
@@ -144,6 +145,8 @@ static void wifi_event_handler(
     else if (event_base == WIFI_EVENT &&
              event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
+        wifi_connected = false;
+
         ESP_LOGW(TAG,
                  "Disconnected, reconnecting...");
 
@@ -153,6 +156,8 @@ static void wifi_event_handler(
     else if (event_base == IP_EVENT &&
              event_id == IP_EVENT_STA_GOT_IP)
     {
+        wifi_connected = true;
+
         ip_event_got_ip_t *event =
             (ip_event_got_ip_t *)event_data;
 

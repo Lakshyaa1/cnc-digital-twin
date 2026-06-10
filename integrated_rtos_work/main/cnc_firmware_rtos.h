@@ -128,7 +128,7 @@ void barcode_handler_task(void *pvParameters);
 void rfid_handler_task(void *pvParameters);
 void aggregator_task(void *pvParameters);
 void analytics_task(void *pvParameters);
-
+void mqtt_task(void *pvParameters);
 // Utility functions
 uint64_t get_timestamp_ms(void);
 void sensor_data_lock(void);

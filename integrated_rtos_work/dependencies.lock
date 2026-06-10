@@ -16,6 +16,6 @@ dependencies:
 direct_dependencies:
 - abobija/rc522
 - idf
-manifest_hash: 856bddbe42c1231e2a19ee3ac99447853ba19d2f14eca41ecfed2825a203b7e4
+manifest_hash: 7964e537f9f14cd4929df75ab388ca7c280fae5e92714aec4376581f1a92c9e6
 target: esp32
 version: 2.0.0

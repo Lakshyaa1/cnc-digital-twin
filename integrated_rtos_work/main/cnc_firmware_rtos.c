@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <string.h>
+#include "mqtt_task.h"
 
 static const char *TAG = "CNC_RTOS";
 
@@ -119,6 +120,20 @@ void rtos_init(void) {
                       NULL, ANALYTICS_TASK_PRIORITY, NULL);
     if (ret != pdPASS) ESP_LOGE(TAG, "Failed to create analytics_task");
     else ESP_LOGI(TAG, "✓ analytics_task created (priority %d)", ANALYTICS_TASK_PRIORITY);
+    
+    ret = xTaskCreate(
+        mqtt_task,
+        "mqtt_task",
+        4096,
+        NULL,
+        3,
+        NULL);
+
+    if (ret != pdPASS)
+        ESP_LOGE(TAG, "Failed to create mqtt_task");
+    else
+        ESP_LOGI(TAG, "✓ mqtt_task created");
 
     ESP_LOGI(TAG, "===== RTOS initialization complete =====");
+    
 }

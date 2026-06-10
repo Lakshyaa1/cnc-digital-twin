@@ -11,5 +11,6 @@ idf_component_register(
         "aggregator_task.c"
         "analytics_task.c"
         "wifi_server.c"
+        "mqtt_task.c"
     INCLUDE_DIRS "."
 )

@@ -16,8 +16,8 @@
 #include "cnc_firmware_rtos.h"
 static const char *TAG = "WIFI_SERVER";
 
-#define WIFI_SSID      "MTNL"
-#define WIFI_PASSWORD  "20851137"
+#define WIFI_SSID      "NCAIR IOT"
+#define WIFI_PASSWORD  "Asim@123Tewari"
 
 static httpd_handle_t server = NULL;
 bool wifi_connected = false;

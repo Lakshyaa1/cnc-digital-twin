@@ -1,6 +1,9 @@
 #include "mqtt_task.h"
 #include "cnc_firmware_rtos.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "esp_log.h"
 #include "mqtt_client.h"
 
@@ -32,11 +35,21 @@ static void mqtt_event_handler(void *handler_args,
 
 void mqtt_task(void *pvParameters)
 {
+    ESP_LOGI(TAG, "Waiting for WiFi startup...");
+    vTaskDelay(pdMS_TO_TICKS(15000));
+
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = MQTT_BROKER_URI,
     };
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
+
+    if (mqtt_client == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize MQTT client");
+        vTaskDelete(NULL);
+        return;
+    }
 
     esp_mqtt_client_register_event(
         mqtt_client,
@@ -44,6 +57,7 @@ void mqtt_task(void *pvParameters)
         mqtt_event_handler,
         NULL);
 
+    ESP_LOGI(TAG, "Starting MQTT client...");
     esp_mqtt_client_start(mqtt_client);
 
     char payload[512];
@@ -78,13 +92,16 @@ void mqtt_task(void *pvParameters)
 
         sensor_data_unlock();
 
-        esp_mqtt_client_publish(
-            mqtt_client,
-            "cnc/telemetry",
-            payload,
-            0,
-            1,
-            0);
+        if (mqtt_client != NULL)
+        {
+            esp_mqtt_client_publish(
+                mqtt_client,
+                "cnc/telemetry",
+                payload,
+                0,
+                1,
+                0);
+        }
 
         ESP_LOGI(TAG, "Published: %s", payload);
 

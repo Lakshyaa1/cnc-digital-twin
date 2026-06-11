@@ -4,6 +4,46 @@
 
 static const char *TAG = "ANALYTICS";
 static uint8_t calculate_health_score(
+                                      /*
+                                       * CNC Machine Health Score (0-100)
+                                       *
+                                       * Purpose:
+                                       * Combines multiple sensor readings into a single machine-health metric
+                                       * for predictive maintenance and dashboard visualization.
+                                       *
+                                       * Score starts at 100 and penalties are applied based on abnormal
+                                       * operating conditions.
+                                       *
+                                       * Vibration RMS:
+                                       *   > 1.5g  -> -10 points
+                                       *   > 2.0g  -> -20 points
+                                       *   > 3.0g  -> -40 points
+                                       *
+                                       * Temperature:
+                                       *   > 45°C  -> -15 points
+                                       *   > 55°C  -> -30 points
+                                       *
+                                       * Pressure:
+                                       *   Outside 80-120 kPa -> -20 points
+                                       *
+                                       * Water Detection:
+                                       *   Water detected -> -30 points
+                                       *
+                                       * Collision Risk:
+                                       *   Distance < 20 cm -> -20 points
+                                       *
+                                       * Health Categories:
+                                       *   80-100 : Healthy
+                                       *   60-79  : Warning
+                                       *   40-59  : Maintenance Required
+                                       *   0-39   : Critical
+                                       *
+                                       * Future Improvements:
+                                       *   - Historical trend analysis
+                                       *   - FFT-based vibration penalties
+                                       *   - Bearing wear prediction
+                                       *   - Remaining Useful Life (RUL) estimation
+                                       */
     float vibration_rms_g,
     float temperature_c,
     float pressure_pa,

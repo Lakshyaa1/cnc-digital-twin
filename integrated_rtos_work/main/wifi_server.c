@@ -1,17 +1,13 @@
 #include <stdio.h>
 #include <string.h>
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
-
 #include "esp_http_server.h"
-
 #include "wifi_server.h"
 #include "cnc_firmware_rtos.h"
 static const char *TAG = "WIFI_SERVER";
@@ -31,6 +27,9 @@ static esp_err_t telemetry_get_handler(httpd_req_t *req)
         response,
         sizeof(response),
         "{"
+        "\"vibration_g\": %.3f,"
+        "\"filtered_vibration_g\": %.3f,"
+        "\"vibration_rms_g\": %.3f,"
         "\"temperature_c\": %.2f,"
         "\"pressure_pa\": %.2f,"
         "\"analog_pressure_bar\": %.2f,"
@@ -42,6 +41,9 @@ static esp_err_t telemetry_get_handler(httpd_req_t *req)
         "\"accel_z\": %d,"
         "\"last_update_ms\": %llu"
         "}",
+        shared_sensor_data.vibration_g,
+        shared_sensor_data.filtered_vibration_g,
+        shared_sensor_data.vibration_rms_g,
         shared_sensor_data.last_bmp280.temperature_c,
         shared_sensor_data.last_bmp280.pressure_pa,
         shared_sensor_data.last_analog_pressure.analog_pressure_bar,

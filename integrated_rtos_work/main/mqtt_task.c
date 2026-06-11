@@ -77,6 +77,9 @@ void mqtt_task(void *pvParameters)
             payload,
             sizeof(payload),
             "{"
+            "vibration_g"
+            "filtered_vibration_g"
+            "vibration_rms_g"
             "\"temperature\":%.2f,"
             "\"pressure\":%.2f,"
             "\"analog_pressure\":%.2f,"

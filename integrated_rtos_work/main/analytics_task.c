@@ -3,7 +3,48 @@
 #include <math.h>
 
 static const char *TAG = "ANALYTICS";
+static uint8_t calculate_health_score(
+    float vibration_rms_g,
+    float temperature_c,
+    float pressure_pa,
+    float distance_cm,
+    bool water_detected)
+{
+    int score = 100;
 
+    /* RMS vibration */
+    if (vibration_rms_g > 3.0f)
+        score -= 40;
+    else if (vibration_rms_g > 2.0f)
+        score -= 20;
+    else if (vibration_rms_g > 1.5f)
+        score -= 10;
+
+    /* Temperature */
+    if (temperature_c > 55.0f)
+        score -= 30;
+    else if (temperature_c > 45.0f)
+        score -= 15;
+
+    /* Pressure */
+    if (pressure_pa < 80000.0f ||
+        pressure_pa > 120000.0f)
+        score -= 20;
+
+    /* Water */
+    if (water_detected)
+        score -= 30;
+
+    /* Collision risk */
+    if (distance_cm > 0 &&
+        distance_cm < 20.0f)
+        score -= 20;
+
+    if (score < 0)
+        score = 0;
+
+    return (uint8_t)score;
+}
 #define KX134_COUNTS_PER_G         4096.0f
 
 // ===== ANOMALY DETECTION THRESHOLDS =====
@@ -22,6 +63,9 @@ void analytics_task(void *pvParameters) {
     ultrasonic_sample_t distance_copy = {0};
 
     float filtered_vibration_g = 0.0f;
+    float vibration_rms_g = 0.0f;
+    uint8_t health_score = 100;
+    bool water_detected = false;
 
     TickType_t last_wake_time = xTaskGetTickCount();
     const TickType_t period = pdMS_TO_TICKS(500);  // 500ms = 2Hz analysis
@@ -41,6 +85,11 @@ void analytics_task(void *pvParameters) {
 
             filtered_vibration_g =
                 shared_sensor_data.filtered_vibration_g;
+            vibration_rms_g =
+                shared_sensor_data.vibration_rms_g;
+
+            water_detected =
+                shared_sensor_data.last_water_level.water_detected;
 
             memcpy(&pressure_copy,
                    &shared_sensor_data.last_bmp280,
@@ -91,12 +140,30 @@ void analytics_task(void *pvParameters) {
                      distance_copy.distance_cm, DISTANCE_COLLISION_CM);
             // TODO: Trigger emergency stop
         }
+        health_score =
+            calculate_health_score(
+                vibration_rms_g,
+                pressure_copy.temperature_c,
+                pressure_copy.pressure_pa,
+                distance_copy.distance_cm,
+                water_detected);
 
+        sensor_data_lock();
+
+        shared_sensor_data.health_score =
+            health_score;
+
+        sensor_data_unlock();
         analysis_count++;
         if (analysis_count % 10 == 0) {
-            ESP_LOGD(TAG, "Analysis cycle #%lu: accel=%.2fg, pressure=%.1fkPa, temp=%.1f°C, dist=%.1fcm",
-                     analysis_count, accel_g, pressure_kpa, 
-                     pressure_copy.temperature_c, distance_copy.distance_cm);
+            ESP_LOGI(
+                TAG,
+                "Health=%u RMS=%.2fg Temp=%.1fC Pressure=%.1fkPa Dist=%.1fcm",
+                health_score,
+                vibration_rms_g,
+                pressure_copy.temperature_c,
+                pressure_kpa,
+                distance_copy.distance_cm);
         }
     }
 }

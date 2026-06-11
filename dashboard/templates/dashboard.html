@@ -275,6 +275,29 @@
                 <div class="metric-label">Authenticated</div>
                 <div class="metric-value" id="authValue" style="font-size: 1.5rem;">--</div>
             </div>
+            <div class="metric-card">
+                <div class="metric-label">Health Score</div>
+                <div class="metric-value" id="healthScore">--</div>
+                <div class="metric-unit">/100</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Vibration</div>
+                <div class="metric-value" id="vibrationValue">--</div>
+                <div class="metric-unit">g</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Filtered Vib</div>
+                <div class="metric-value" id="filteredVibrationValue">--</div>
+                <div class="metric-unit">g</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">RMS Vib</div>
+                <div class="metric-value" id="rmsVibrationValue">--</div>
+                <div class="metric-unit">g</div>
+            </div>
         </div>
 
         <!-- Accelerometer Data -->
@@ -343,6 +366,19 @@
                     <canvas id="accelZChart"></canvas>
                 </div>
             </div>
+            <div class="chart-container">
+                <div class="chart-title">RMS Vibration Trend</div>
+                <div class="chart-canvas">
+                    <canvas id="vibrationChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Health Score Trend</div>
+                <div class="chart-canvas">
+                    <canvas id="healthChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -388,11 +424,15 @@
             { id: 'pressChart', dataKey: 'pressure_pa', label: 'Pressure', unit: 'Pa' },
             { id: 'distChart', dataKey: 'distance_cm', label: 'Distance', unit: 'cm' },
             { id: 'gaugeChart', dataKey: 'analog_pressure_bar', label: 'Gauge', unit: 'bar' },
+
             { id: 'accelXChart', dataKey: 'accel_x', label: 'Accel X', unit: 'mg' },
             { id: 'accelYChart', dataKey: 'accel_y', label: 'Accel Y', unit: 'mg' },
-            { id: 'accelZChart', dataKey: 'accel_z', label: 'Accel Z', unit: 'mg' }
-        ];
+            { id: 'accelZChart', dataKey: 'accel_z', label: 'Accel Z', unit: 'mg' },
 
+            { id: 'vibrationChart', dataKey: 'vibration_rms_g', label: 'RMS Vibration', unit: 'g' },
+            { id: 'healthChart', dataKey: 'health_score', label: 'Health Score', unit: '%' }
+        ];
+        
         chartDefs.forEach(def => {
             const ctx = document.getElementById(def.id).getContext('2d');
             charts[def.dataKey] = new Chart(ctx, {
@@ -433,7 +473,22 @@ socket.on('disconnect', () => {
 });
 
 socket.on('data_update', (data) => {
+     
+     window.chartHistory.vibration_g.push(
+         data.vibration_g ?? 0
+     );
 
+     window.chartHistory.filtered_vibration_g.push(
+         data.filtered_vibration_g ?? 0
+     );
+
+     window.chartHistory.vibration_rms_g.push(
+         data.vibration_rms_g ?? 0
+     );
+
+     window.chartHistory.health_score.push(
+         data.health_score ?? 0
+     );
     updateDashboard(data);
 
     if (!window.chartHistory) {
@@ -487,6 +542,17 @@ socket.on('connection_error', (error) => {
             document.getElementById('distValue').textContent = formatNumber(data.distance_cm, 2);
             document.getElementById('waterValue').textContent = data.water_detected ? '🌊 YES' : '🏜️ NO';
             document.getElementById('authValue').textContent = data.authenticated ? '✓ YES' : '✗ NO';
+            document.getElementById('healthScore').textContent =
+                data.health_score ?? '--';
+
+            document.getElementById('vibrationValue').textContent =
+                formatNumber(data.vibration_g, 3);
+
+            document.getElementById('filteredVibrationValue').textContent =
+                formatNumber(data.filtered_vibration_g, 3);
+
+            document.getElementById('rmsVibrationValue').textContent =
+                formatNumber(data.vibration_rms_g, 3);
 
             // Update accelerometer
             document.getElementById('accelX').textContent = formatNumber(data.accel_x, 0);
@@ -504,17 +570,25 @@ socket.on('connection_error', (error) => {
             }
         }
 
-      window.chartHistory = {
-    timestamps: [],
-    temperature_c: [],
-    pressure_pa: [],
-    analog_pressure_bar: [],
-    distance_cm: [],
-    water_detected: [],
-    accel_x: [],
-    accel_y: [],
-    accel_z: []
-};
+        window.chartHistory = {
+            timestamps: [],
+
+            temperature_c: [],
+            pressure_pa: [],
+            analog_pressure_bar: [],
+            distance_cm: [],
+
+            vibration_g: [],
+            filtered_vibration_g: [],
+            vibration_rms_g: [],
+            health_score: [],
+
+            water_detected: [],
+
+            accel_x: [],
+            accel_y: [],
+            accel_z: []
+        };
 
         // Fetch initial history
         async function loadHistory() {
@@ -528,6 +602,17 @@ socket.on('connection_error', (error) => {
         window.chartHistory.pressure_pa = history.pressure_pa || [];
         window.chartHistory.analog_pressure_bar = history.analog_pressure_bar || [];
         window.chartHistory.distance_cm = history.distance_cm || [];
+        window.chartHistory.vibration_g =
+            history.vibration_g || [];
+
+        window.chartHistory.filtered_vibration_g =
+            history.filtered_vibration_g || [];
+
+        window.chartHistory.vibration_rms_g =
+            history.vibration_rms_g || [];
+
+        window.chartHistory.health_score =
+            history.health_score || [];
         window.chartHistory.water_detected = history.water_detected || [];
         window.chartHistory.accel_x = history.accel_x || [];
         window.chartHistory.accel_y = history.accel_y || [];

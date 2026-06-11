@@ -47,11 +47,20 @@ data_lock = Lock()
 
 data_history = {
     'timestamps': deque(maxlen=MAX_HISTORY),
+
     'temperature_c': deque(maxlen=MAX_HISTORY),
     'pressure_pa': deque(maxlen=MAX_HISTORY),
     'analog_pressure_bar': deque(maxlen=MAX_HISTORY),
     'distance_cm': deque(maxlen=MAX_HISTORY),
+
+    'vibration_g': deque(maxlen=MAX_HISTORY),
+    'filtered_vibration_g': deque(maxlen=MAX_HISTORY),
+    'vibration_rms_g': deque(maxlen=MAX_HISTORY),
+
+    'health_score': deque(maxlen=MAX_HISTORY),
+
     'water_detected': deque(maxlen=MAX_HISTORY),
+
     'accel_x': deque(maxlen=MAX_HISTORY),
     'accel_y': deque(maxlen=MAX_HISTORY),
     'accel_z': deque(maxlen=MAX_HISTORY),
@@ -113,7 +122,21 @@ def fetch_esp32_data():
                 data_history['accel_z'].append(
                     data.get('accel_z', 0)
                 )
+                data_history['vibration_g'].append(
+                data.get('vibration_g', 0)
+                )
 
+                data_history['filtered_vibration_g'].append(
+                data.get('filtered_vibration_g', 0)
+                )
+
+                data_history['vibration_rms_g'].append(
+                data.get('vibration_rms_g', 0)
+                )
+
+                data_history['health_score'].append(
+                data.get('health_score', 0)
+                )
                 latest_data = {
                     'timestamp': timestamp,
                     **data
@@ -157,11 +180,20 @@ def get_history():
 
         return jsonify({
             'timestamps': list(data_history['timestamps']),
+
             'temperature_c': list(data_history['temperature_c']),
             'pressure_pa': list(data_history['pressure_pa']),
             'analog_pressure_bar': list(data_history['analog_pressure_bar']),
             'distance_cm': list(data_history['distance_cm']),
+
+            'vibration_g': list(data_history['vibration_g']),
+            'filtered_vibration_g': list(data_history['filtered_vibration_g']),
+            'vibration_rms_g': list(data_history['vibration_rms_g']),
+
+            'health_score': list(data_history['health_score']),
+
             'water_detected': list(data_history['water_detected']),
+
             'accel_x': list(data_history['accel_x']),
             'accel_y': list(data_history['accel_y']),
             'accel_z': list(data_history['accel_z']),

@@ -77,9 +77,10 @@ void mqtt_task(void *pvParameters)
             payload,
             sizeof(payload),
             "{"
-            "vibration_g"
-            "filtered_vibration_g"
-            "vibration_rms_g"
+            "\"vibration_g\":%.3f,"
+            "\"filtered_vibration_g\":%.3f,"
+            "\"vibration_rms_g\":%.3f,"
+            "\"health_score\":%d,"
             "\"temperature\":%.2f,"
             "\"pressure\":%.2f,"
             "\"analog_pressure\":%.2f,"
@@ -90,6 +91,10 @@ void mqtt_task(void *pvParameters)
             "\"accel_y\":%d,"
             "\"accel_z\":%d"
             "}",
+            shared_sensor_data.vibration_g,
+            shared_sensor_data.filtered_vibration_g,
+            shared_sensor_data.vibration_rms_g,
+            shared_sensor_data.health_score,
             shared_sensor_data.last_bmp280.temperature_c,
             shared_sensor_data.last_bmp280.pressure_pa,
             shared_sensor_data.last_analog_pressure.analog_pressure_bar,
@@ -98,8 +103,9 @@ void mqtt_task(void *pvParameters)
             shared_sensor_data.user_authenticated,
             shared_sensor_data.last_accel.x,
             shared_sensor_data.last_accel.y,
-            shared_sensor_data.last_accel.z);
-
+            shared_sensor_data.last_accel.z
+        );
+        
         sensor_data_unlock();
 
         if (mqtt_client != NULL)

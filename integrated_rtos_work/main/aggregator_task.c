@@ -7,6 +7,10 @@ static const char *TAG = "AGGREGATOR";
 
 #define KX134_COUNTS_PER_G   4096.0f
 #define VIBRATION_FILTER_SIZE 5
+#define RMS_WINDOW_SIZE 20
+
+static float rms_history[RMS_WINDOW_SIZE] = {0};
+static uint8_t rms_index = 0;
 
 static float vibration_history[VIBRATION_FILTER_SIZE] = {0};
 static uint8_t vibration_index = 0;
@@ -56,12 +60,29 @@ void aggregator_task(void *pvParameters)
         }
 
         filtered_vibration_g /= VIBRATION_FILTER_SIZE;
+        rms_history[rms_index] = filtered_vibration_g;
+
+        rms_index =
+            (rms_index + 1) % RMS_WINDOW_SIZE;
+
+        float rms_sum = 0.0f;
+
+        for (int i = 0; i < RMS_WINDOW_SIZE; i++)
+        {
+            rms_sum +=
+                rms_history[i] *
+                rms_history[i];
+        }
+
+        float vibration_rms_g =
+            sqrtf(rms_sum / RMS_WINDOW_SIZE);
 
         sensor_data_lock();
         shared_sensor_data.last_accel = accel_sample;
 
         shared_sensor_data.vibration_g = vibration_g;
         shared_sensor_data.filtered_vibration_g = filtered_vibration_g;
+        shared_sensor_data.vibration_rms_g = vibration_rms_g;
         shared_sensor_data.last_bmp280 = pressure_sample.bmp280;
         shared_sensor_data.last_analog_pressure = pressure_sample.analog;
         shared_sensor_data.last_ultrasonic = ultrasonic_sample;

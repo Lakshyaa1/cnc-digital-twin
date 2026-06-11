@@ -97,6 +97,8 @@ typedef struct {
     // Vibration metrics
     float vibration_g;
     float filtered_vibration_g;
+    float vibration_rms_g;
+    uint8_t health_score;
 
     // Anomaly flags
     uint8_t accel_anomaly;

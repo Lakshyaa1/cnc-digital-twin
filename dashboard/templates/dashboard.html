@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 CNC Predictive Maintenance Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid #64748b;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(100, 116, 139, 0.2);
+            border-radius: 4px;
+            border-left: 3px solid #60a5fa;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            border-color: #64748b;
+            background: rgba(30, 41, 59, 1);
+            transform: translateY(-2px);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #60a5fa;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 4px;
+        }
+
+        .metric-unit {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6);
+            opacity: 0.6;
+        }
+
+        .chart-title {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .chart-canvas {
+            position: relative;
+            height: 300px;
+        }
+
+        .accel-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .accel-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .accel-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .accel-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            color: #60a5fa;
+        }
+
+        .accel-unit {
+            font-size: 0.65rem;
+            color: #64748b;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #64748b;
+            font-size: 0.85rem;
+            border-top: 1px solid #475569;
+        }
+
+        .last-update {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CNC Predictive Maintenance</h1>
+        <p style="color: #94a3b8; margin-top: 8px;">Real-time sensor telemetry dashboard</p>
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-dot" id="connectionDot"></span>
+                <span id="connectionStatus">Connecting...</span>
+            </div>
+            <div class="status-item">
+                Last update: <span id="lastUpdate">--:--:--</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Temperature</div>
+                <div class="metric-value" id="tempValue">--</div>
+                <div class="metric-unit">°C</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Pressure</div>
+                <div class="metric-value" id="pressValue">--</div>
+                <div class="metric-unit">Pa</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Gauge Pressure</div>
+                <div class="metric-value" id="gaugeValue">--</div>
+                <div class="metric-unit">bar</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Distance</div>
+                <div class="metric-value" id="distValue">--</div>
+                <div class="metric-unit">cm</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Water Detected</div>
+                <div class="metric-value" id="waterValue" style="font-size: 1.5rem;">--</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Authenticated</div>
+                <div class="metric-value" id="authValue" style="font-size: 1.5rem;">--</div>
+            </div>
+        </div>
+
+        <!-- Accelerometer Data -->
+        <div class="chart-container" style="margin-bottom: 20px;">
+            <div class="chart-title">Accelerometer (Real-time)</div>
+            <div class="accel-container">
+                <div class="accel-card">
+                    <div class="accel-label">X-Axis</div>
+                    <div class="accel-value" id="accelX">--</div>
+                    <div class="accel-unit">mg</div>
+                </div>
+                <div class="accel-card">
+                    <div class="accel-label">Y-Axis</div>
+                    <div class="accel-value" id="accelY">--</div>
+                    <div class="accel-unit">mg</div>
+                </div>
+                <div class="accel-card">
+                    <div class="accel-label">Z-Axis</div>
+                    <div class="accel-value" id="accelZ">--</div>
+                    <div class="accel-unit">mg</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Time Series Charts -->
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">Temperature Over Time</div>
+                <div class="chart-canvas">
+                    <canvas id="tempChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Pressure Over Time</div>
+                <div class="chart-canvas">
+                    <canvas id="pressChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Distance Over Time</div>
+                <div class="chart-canvas">
+                    <canvas id="distChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Gauge Pressure Over Time</div>
+                <div class="chart-canvas">
+                    <canvas id="gaugeChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Acceleration X-Axis</div>
+                <div class="chart-canvas">
+                    <canvas id="accelXChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Acceleration Y-Axis</div>
+                <div class="chart-canvas">
+                    <canvas id="accelYChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Acceleration Z-Axis</div>
+                <div class="chart-canvas">
+                    <canvas id="accelZChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>ESP32 CNC Predictive Maintenance System</p>
+        <div class="last-update" id="footer-update"></div>
+    </div>
+
+    <script>
+        // Chart.js color scheme
+        const colors = {
+            primary: '#60a5fa',
+            secondary: '#a78bfa',
+            accent: '#f472b6',
+            grid: 'rgba(100, 116, 139, 0.1)',
+            text: '#cbd5e1'
+        };
+
+        const chartConfig = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: colors.grid, drawBorder: false },
+                    ticks: { color: colors.text, font: { size: 10 } }
+                },
+                y: {
+                    grid: { color: colors.grid, drawBorder: false },
+                    ticks: { color: colors.text, font: { size: 10 } }
+                }
+            }
+        };
+
+        // Initialize charts
+        const charts = {};
+        const chartDefs = [
+            { id: 'tempChart', dataKey: 'temperature_c', label: 'Temperature', unit: '°C' },
+            { id: 'pressChart', dataKey: 'pressure_pa', label: 'Pressure', unit: 'Pa' },
+            { id: 'distChart', dataKey: 'distance_cm', label: 'Distance', unit: 'cm' },
+            { id: 'gaugeChart', dataKey: 'analog_pressure_bar', label: 'Gauge', unit: 'bar' },
+            { id: 'accelXChart', dataKey: 'accel_x', label: 'Accel X', unit: 'mg' },
+            { id: 'accelYChart', dataKey: 'accel_y', label: 'Accel Y', unit: 'mg' },
+            { id: 'accelZChart', dataKey: 'accel_z', label: 'Accel Z', unit: 'mg' }
+        ];
+
+        chartDefs.forEach(def => {
+            const ctx = document.getElementById(def.id).getContext('2d');
+            charts[def.dataKey] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: def.label,
+                        data: [],
+                        borderColor: colors.primary,
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: colors.primary
+                    }]
+                },
+                options: chartConfig
+            });
+        });
+
+        // WebSocket connection
+        const socket = io();
+let isConnected = false;
+
+socket.on('connect', () => {
+    isConnected = true;
+    updateConnectionStatus(true);
+    console.log('[INFO] Connected to backend');
+});
+
+socket.on('disconnect', () => {
+    isConnected = false;
+    updateConnectionStatus(false);
+    console.log('[INFO] Disconnected from backend');
+});
+
+socket.on('data_update', (data) => {
+
+    updateDashboard(data);
+
+    if (!window.chartHistory) {
+        return;
+    }
+
+    window.chartHistory.timestamps.push(data.timestamp);
+
+    window.chartHistory.temperature_c.push(data.temperature_c ?? 0);
+    window.chartHistory.pressure_pa.push(data.pressure_pa ?? 0);
+    window.chartHistory.analog_pressure_bar.push(data.analog_pressure_bar ?? 0);
+    window.chartHistory.distance_cm.push(data.distance_cm ?? 0);
+
+    window.chartHistory.accel_x.push(data.accel_x ?? 0);
+    window.chartHistory.accel_y.push(data.accel_y ?? 0);
+    window.chartHistory.accel_z.push(data.accel_z ?? 0);
+
+    window.chartHistory.water_detected.push(data.water_detected ?? false);
+
+    const MAX_HISTORY = 300;
+
+    Object.keys(window.chartHistory).forEach(key => {
+        while (window.chartHistory[key].length > MAX_HISTORY) {
+            window.chartHistory[key].shift();
+        }
+    });
+
+    updateCharts();
+});
+
+socket.on('connection_error', (error) => {
+    console.error('[ERROR]', error.error);
+});
+        function updateConnectionStatus(connected) {
+            const dot = document.getElementById('connectionDot');
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                dot.classList.remove('offline');
+                status.textContent = 'Connected';
+            } else {
+                dot.classList.add('offline');
+                status.textContent = 'Disconnected';
+            }
+        }
+
+        function updateDashboard(data) {
+            // Update metric cards
+            document.getElementById('tempValue').textContent = formatNumber(data.temperature_c, 2);
+            document.getElementById('pressValue').textContent = formatNumber(data.pressure_pa, 0);
+            document.getElementById('gaugeValue').textContent = formatNumber(data.analog_pressure_bar, 2);
+            document.getElementById('distValue').textContent = formatNumber(data.distance_cm, 2);
+            document.getElementById('waterValue').textContent = data.water_detected ? '🌊 YES' : '🏜️ NO';
+            document.getElementById('authValue').textContent = data.authenticated ? '✓ YES' : '✗ NO';
+
+            // Update accelerometer
+            document.getElementById('accelX').textContent = formatNumber(data.accel_x, 0);
+            document.getElementById('accelY').textContent = formatNumber(data.accel_y, 0);
+            document.getElementById('accelZ').textContent = formatNumber(data.accel_z, 0);
+
+            // Update timestamp
+            const time = new Date(data.timestamp).toLocaleTimeString();
+            document.getElementById('lastUpdate').textContent = time;
+            document.getElementById('footer-update').textContent = `Last update: ${time}`;
+
+            // Update charts if we have history
+            if (window.chartHistory) {
+                updateCharts();
+            }
+        }
+
+      window.chartHistory = {
+    timestamps: [],
+    temperature_c: [],
+    pressure_pa: [],
+    analog_pressure_bar: [],
+    distance_cm: [],
+    water_detected: [],
+    accel_x: [],
+    accel_y: [],
+    accel_z: []
+};
+
+        // Fetch initial history
+        async function loadHistory() {
+    try {
+
+        const response = await fetch('/api/history');
+        const history = await response.json();
+
+        window.chartHistory.timestamps = history.timestamps || [];
+        window.chartHistory.temperature_c = history.temperature_c || [];
+        window.chartHistory.pressure_pa = history.pressure_pa || [];
+        window.chartHistory.analog_pressure_bar = history.analog_pressure_bar || [];
+        window.chartHistory.distance_cm = history.distance_cm || [];
+        window.chartHistory.water_detected = history.water_detected || [];
+        window.chartHistory.accel_x = history.accel_x || [];
+        window.chartHistory.accel_y = history.accel_y || [];
+        window.chartHistory.accel_z = history.accel_z || [];
+
+        updateCharts();
+
+    } catch (err) {
+        console.error('[ERROR] Failed to load history:', err);
+    }
+}
+
+        function updateCharts() {
+
+    if (!window.chartHistory) return;
+
+    const history = window.chartHistory;
+
+    chartDefs.forEach(def => {
+
+        const chart = charts[def.dataKey];
+
+        chart.data.labels = history.timestamps.map(ts =>
+            new Date(ts).toLocaleTimeString()
+        );
+
+        chart.data.datasets[0].data = history[def.dataKey];
+
+        chart.update('none');
+    });
+}
+        function formatNumber(num, decimals) {
+            if (num === null || num === undefined) return '--';
+            return parseFloat(num).toFixed(decimals);
+        }
+
+        // Load history on page load
+        loadHistory();
+    </script>
+</body>
+</html>

@@ -298,6 +298,13 @@
                 <div class="metric-value" id="rmsVibrationValue">--</div>
                 <div class="metric-unit">g</div>
             </div>
+            <div class="metric-card">
+                <div class="metric-label">Machine State</div>
+                <div class="metric-value"
+                 id="machineState"
+                style="font-size:1.2rem;">
+            </div>
+</div>
         </div>
 
         <!-- Accelerometer Data -->
@@ -540,6 +547,7 @@ socket.on('connection_error', (error) => {
             document.getElementById('pressValue').textContent = formatNumber(data.pressure_pa, 0);
             document.getElementById('gaugeValue').textContent = formatNumber(data.analog_pressure_bar, 2);
             document.getElementById('distValue').textContent = formatNumber(data.distance_cm, 2);
+            document.getElementById('machineState').textContent = data.machine_status ?? '--';
             document.getElementById('waterValue').textContent = data.water_detected ? '🌊 YES' : '🏜️ NO';
             document.getElementById('authValue').textContent = data.authenticated ? '✓ YES' : '✗ NO';
             document.getElementById('healthScore').textContent =

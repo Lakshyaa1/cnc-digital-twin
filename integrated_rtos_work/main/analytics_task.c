@@ -1,6 +1,7 @@
 #include "cnc_firmware_rtos.h"
 #include "esp_log.h"
 #include <math.h>
+#include <string.h>
 
 static const char *TAG = "ANALYTICS";
 static uint8_t calculate_health_score(
@@ -192,6 +193,32 @@ void analytics_task(void *pvParameters) {
 
         shared_sensor_data.health_score =
             health_score;
+
+        if (health_score >= 80)
+        {
+            strcpy(shared_sensor_data.machine_status,
+                   "EXCELLENT");
+        }
+        else if (health_score >= 60)
+        {
+            strcpy(shared_sensor_data.machine_status,
+                   "HEALTHY");
+        }
+        else if (health_score >= 40)
+        {
+            strcpy(shared_sensor_data.machine_status,
+                   "WARNING");
+        }
+        else if (health_score >= 20)
+        {
+            strcpy(shared_sensor_data.machine_status,
+                   "MAINTENANCE");
+        }
+        else
+        {
+            strcpy(shared_sensor_data.machine_status,
+                   "CRITICAL");
+        }
 
         sensor_data_unlock();
         analysis_count++;

@@ -81,6 +81,7 @@ void mqtt_task(void *pvParameters)
             "\"filtered_vibration_g\":%.3f,"
             "\"vibration_rms_g\":%.3f,"
             "\"health_score\":%d,"
+            "\"machine_status\":\"%s\","
             "\"temperature\":%.2f,"
             "\"pressure\":%.2f,"
             "\"analog_pressure\":%.2f,"
@@ -95,6 +96,7 @@ void mqtt_task(void *pvParameters)
             shared_sensor_data.filtered_vibration_g,
             shared_sensor_data.vibration_rms_g,
             shared_sensor_data.health_score,
+            shared_sensor_data.machine_status,
             shared_sensor_data.last_bmp280.temperature_c,
             shared_sensor_data.last_bmp280.pressure_pa,
             shared_sensor_data.last_analog_pressure.analog_pressure_bar,

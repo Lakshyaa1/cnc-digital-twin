@@ -99,6 +99,7 @@ typedef struct {
     float filtered_vibration_g;
     float vibration_rms_g;
     uint8_t health_score;
+    char machine_status[20];
 
     // Anomaly flags
     uint8_t accel_anomaly;

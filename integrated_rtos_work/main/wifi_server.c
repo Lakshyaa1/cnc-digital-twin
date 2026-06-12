@@ -31,6 +31,7 @@ static esp_err_t telemetry_get_handler(httpd_req_t *req)
         "\"filtered_vibration_g\": %.3f,"
         "\"vibration_rms_g\": %.3f,"
         "\"health_score\": %d,"
+        "\"machine_status\":\"%s\","
         "\"temperature_c\": %.2f,"
         "\"pressure_pa\": %.2f,"
         "\"analog_pressure_bar\": %.2f,"
@@ -46,6 +47,7 @@ static esp_err_t telemetry_get_handler(httpd_req_t *req)
         shared_sensor_data.filtered_vibration_g,
         shared_sensor_data.vibration_rms_g,
         shared_sensor_data.health_score,
+        shared_sensor_data.machine_status,
         shared_sensor_data.last_bmp280.temperature_c,
         shared_sensor_data.last_bmp280.pressure_pa,
         shared_sensor_data.last_analog_pressure.analog_pressure_bar,

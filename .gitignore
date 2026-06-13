@@ -16,3 +16,4 @@ __pycache__/
 *.tmp
 .DS_Store
 venv/
+dashboard/venv/
